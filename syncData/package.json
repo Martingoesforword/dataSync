@@ -1,0 +1,12 @@
+{
+  "name": "your-app",
+  "version": "0.1.0",
+  "main": "main.js",
+  "devDependencies": {
+    "electron": "^17.0.1"
+  },
+  "dependencies": {
+    "express": "^4.17.2",
+    "socket.io": "^4.4.1"
+  }
+}
