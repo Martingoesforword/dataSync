@@ -6,16 +6,36 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://code.jquery.com/jquery-1.11.1.js" rel="external nofollow" ></script>
   <script>
+    var dataGit = {};
     $(function () {
       var socket = io();
       $('form').submit(function(){
-        socket.emit('chat message', $('#m').val());
+        var respo = dataGit.dataRespo;
+        respo.push({
+          //想数据git推送数据改动项，类似github一样
+          messages: {
+            type: {},
+            changes: [
+              {
+                type: "array_add",
+                source: "client",
+                info: socket.id+": "+$('#m').val()
+              }
+            ]
+          }
+        });
+        socket.emit('sync', dataGit);
         $('#m').val('');
         return false;
       });
 
-      socket.on('chat message', function(msg){
-        $('#messages').append($('<li>').text(msg));
+      socket.on('init', function(dg){
+        dataGit = dg;
+        $('#messages').append($('<li>').text("datagit初始化"));
+      });
+      socket.on('sync', function(dg){
+        dataGit = dg;
+        $('#messages').append($('<li>').text("datagit已更新"));
       });
     });
   </script>

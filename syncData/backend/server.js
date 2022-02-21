@@ -27,7 +27,7 @@ var dataUser = {
 }
 
 var getJsPath = function (root, path) {
-    return eval(root+path);
+    return eval("root"+path);
 }
 
 var syncNode = {
@@ -42,7 +42,7 @@ var syncNode = {
             var type = getJsPath(this.dataRespo[0], dataPath).type;
             for (let i = curVer; i <= toVer; i++) {
                 var data = getJsPath(this.dataRespo[i], dataPath);
-                changes.concat(data.changes);
+                changes = changes.concat(data.changes);
             }
             return {
                 type: type,
@@ -55,7 +55,7 @@ var syncNode = {
         dataRespo: [
             {
                 messages: {
-                    type: dataType.ARRAY,
+                    type: dataType.types.ARRAY,
                     changes: [
                         {
                             type: dataType.common.INIT_SPACE,
@@ -65,10 +65,10 @@ var syncNode = {
             },
             {
                 messages: {
-                    type: dataType.ARRAY,
+                    type: dataType.types.ARRAY,
                     changes: [
                         {
-                            type: dataType.ARRAY.ADD,
+                            type: dataType.types.ARRAY.ADD,
                             source: dataUser.common.SERVER,
                             info: "id1: 我来了"
                         }
@@ -77,10 +77,10 @@ var syncNode = {
             },
             {
                 messages: {
-                    type: dataType.ARRAY,
+                    type: dataType.types.ARRAY,
                     changes: [
                         {
-                            type: dataType.ARRAY.ADD,
+                            type: dataType.types.ARRAY.ADD,
                             source: dataUser.common.SERVER,
                             info: "id2: 我来了"
                         }
@@ -103,25 +103,25 @@ var syncNode = {
             messageMng: {
                 dataGitVer: 0,
                 syncAction: function (toVer) {
-                    var changesInfo = syncNode.dataGit.getChanges("?['messages']", this.dataGitVer, toVer);
+                    var changesInfo = syncNode.dataGit.getChanges(".messages", this.dataGitVer, toVer);
                     var type = changesInfo.type;
                     var allNewMessages = [];
                     changesInfo.changes.forEach(change=>{
                         //检查更改内容
                         var changeType = change.type;
                         var changeInfo = change.info;
-                        if(changeType === dataType.ARRAY.ADD) {
+                        if(changeType === dataType.types.ARRAY.ADD) {
                             allNewMessages.push(changeInfo);
                         }
                     });
-                    var messagesData = getJsPath(syncNode.dataGit.dataShape, "?['messages']");
+                    var messagesData = getJsPath(syncNode.dataGit.dataShape, ".messages");
 
                     //更新当前数据
                     messagesData.concat(allNewMessages);
                     //更新逻辑认定数据git版本号
                     this.dataGitVer = syncNode.dataGit.getLeastVer();
                     //同步数据git
-                    io.emit("data", syncNode.dataGit);
+                    io.emit("sync", syncNode.dataGit);
                 }
             }
         }
@@ -130,14 +130,14 @@ var syncNode = {
 
 var assertChange = function (changeFunc) {
     changeFunc();
-    syncNode.logics.syncToLogics();
+    syncNode.logicMng.syncToLogics();
 }
 io.on('connection', function(socket){
     //日志记录
     console.log('a user connected');
 
     //向用户传递全局数据
-    io.emit("data", syncNode.dataGit);
+    io.emit("init", syncNode.dataGit);
 
     //通知其他人，这个人来了
     assertChange(function (){
@@ -145,10 +145,10 @@ io.on('connection', function(socket){
         respo.push({
             //想数据git推送数据改动项，类似github一样
             messages: {
-                type: dataType.ARRAY,
+                type: dataType.types.ARRAY,
                 changes: [
                     {
-                        type: dataType.ARRAY.ADD,
+                        type: dataType.types.ARRAY.ADD,
                         source: dataUser.common.SERVER,
                         info: socket.id+": "+"hi"
                     }
@@ -160,6 +160,8 @@ io.on('connection', function(socket){
     //设置此用户发送消息处理
     socket.on('sync', function(dataGit){
         assertChange(function (){
+            dataGit.getLeastVer = syncNode.dataGit.getLeastVer;
+            dataGit.getChanges = syncNode.dataGit.getChanges;
             syncNode.dataGit = dataGit;
         });
     });
@@ -171,10 +173,10 @@ io.on('connection', function(socket){
             respo.push({
                 //想数据git推送数据改动项，类似github一样
                 messages: {
-                    type: dataType.ARRAY,
+                    type: dataType.types.ARRAY,
                     changes: [
                         {
-                            type: dataType.ARRAY.ADD,
+                            type: dataType.types.ARRAY.ADD,
                             source: dataUser.common.SERVER,
                             info:  socket.id+": "+"我走了"
                         }
