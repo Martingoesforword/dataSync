@@ -7,6 +7,29 @@
   <script src="https://code.jquery.com/jquery-1.11.1.js" rel="external nofollow" ></script>
   <script>
     var dataGit = {};
+
+    var getJsPath = function (root, path) {
+      return eval("root"+path);
+    }
+
+    var getLeastVer = function (dataRespo) {
+      return dataRespo.length-1;
+    }
+    var getChanges = function (dataRespo, dataPath, fromVer, toVer) {
+      var curVer = fromVer+1;
+
+      var changes = [];
+      var type = getJsPath(dataRespo[0], dataPath).type;
+      for (let i = curVer; i <= toVer; i++) {
+        var data = getJsPath(dataRespo[i], dataPath);
+        changes = changes.concat(data.changes);
+      }
+      return {
+        type: type,
+        changes: changes
+      };
+    }
+
     $(function () {
       var socket = io();
       $('form').submit(function(){
@@ -24,18 +47,38 @@
             ]
           }
         });
+        $('#messages').append($('<li>').text(socket.id+": "+$('#m').val()));
+
         socket.emit('sync', dataGit);
         $('#m').val('');
         return false;
       });
 
       socket.on('init', function(dg){
+        var version = 0;
         dataGit = dg;
-        $('#messages').append($('<li>').text("datagit初始化"));
+        var changes = getChanges(dataGit.dataRespo, ".messages", version, getLeastVer(dataGit.dataRespo));
+        changes.changes.forEach((change)=>{
+          //检查更改内容
+          var changeType = change.type;
+          var changeInfo = change.info;
+          if(changeType === "array_add") {
+            $('#messages').append($('<li>').text(changeInfo));
+          }
+        });
       });
       socket.on('sync', function(dg){
+        var version = getLeastVer(dataGit.dataRespo);
         dataGit = dg;
-        $('#messages').append($('<li>').text("datagit已更新"));
+        var changes = getChanges(dataGit.dataRespo, ".messages", version, getLeastVer(dataGit.dataRespo));
+        changes.changes.forEach((change)=>{
+          //检查更改内容
+          var changeType = change.type;
+          var changeInfo = change.info;
+          if(changeType === "array_add") {
+            $('#messages').append($('<li>').text(changeInfo));
+          }
+        });
       });
     });
   </script>

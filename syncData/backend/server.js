@@ -30,25 +30,26 @@ var getJsPath = function (root, path) {
     return eval("root"+path);
 }
 
+var getLeastVer = function (dataRespo) {
+    return dataRespo.length-1;
+}
+var getChanges = function (dataRespo, dataPath, fromVer, toVer) {
+    var curVer = fromVer+1;
+
+    var changes = [];
+    var type = getJsPath(dataRespo[0], dataPath).type;
+    for (let i = curVer; i <= toVer; i++) {
+        var data = getJsPath(dataRespo[i], dataPath);
+        changes = changes.concat(data.changes);
+    }
+    return {
+        type: type,
+        changes: changes
+    };
+}
+
 var syncNode = {
     dataGit: {
-        getLeastVer: function () {
-            return this.dataRespo.length-1;
-        },
-        getChanges: function (dataPath, fromVer, toVer) {
-            var curVer = fromVer+1;
-
-            var changes = [];
-            var type = getJsPath(this.dataRespo[0], dataPath).type;
-            for (let i = curVer; i <= toVer; i++) {
-                var data = getJsPath(this.dataRespo[i], dataPath);
-                changes = changes.concat(data.changes);
-            }
-            return {
-                type: type,
-                changes: changes
-            };
-        },
         dataShape: {
             messages: []
         },
@@ -92,7 +93,7 @@ var syncNode = {
     logicMng: {
         //遍历同步所有逻辑体
         syncToLogics: function () {
-            var currentVer = syncNode.dataGit.getLeastVer();
+            var currentVer = getLeastVer(syncNode.dataGit.dataRespo);
             var logics = syncNode.logicMng.logics;
             for (const logicsKey in syncNode.logicMng.logics) {
                 var logic = logics[logicsKey];
@@ -101,9 +102,9 @@ var syncNode = {
         },
         logics: {
             messageMng: {
-                dataGitVer: 0,
+                dataGitVer: 2,
                 syncAction: function (toVer) {
-                    var changesInfo = syncNode.dataGit.getChanges(".messages", this.dataGitVer, toVer);
+                    var changesInfo = getChanges(syncNode.dataGit.dataRespo, ".messages", this.dataGitVer, toVer);
                     var type = changesInfo.type;
                     var allNewMessages = [];
                     changesInfo.changes.forEach(change=>{
@@ -119,7 +120,7 @@ var syncNode = {
                     //更新当前数据
                     messagesData.concat(allNewMessages);
                     //更新逻辑认定数据git版本号
-                    this.dataGitVer = syncNode.dataGit.getLeastVer();
+                    this.dataGitVer = getLeastVer(syncNode.dataGit.dataRespo);
                     //同步数据git
                     io.emit("sync", syncNode.dataGit);
                 }
@@ -160,8 +161,6 @@ io.on('connection', function(socket){
     //设置此用户发送消息处理
     socket.on('sync', function(dataGit){
         assertChange(function (){
-            dataGit.getLeastVer = syncNode.dataGit.getLeastVer;
-            dataGit.getChanges = syncNode.dataGit.getChanges;
             syncNode.dataGit = dataGit;
         });
     });
